@@ -2,7 +2,7 @@
 // Settings → Backup exports it as JSON.
 import { useSyncExternalStore } from 'react';
 import { schedule, todayStr, type Rating, type SrsCard } from './srs';
-import type { Lang } from './types';
+import { LANGS, type Lang } from './types';
 
 export interface Attempt {
   at: string;
@@ -106,7 +106,7 @@ export function defaultState(): AppState {
   return {
     version: 1,
     createdAt: new Date().toISOString(),
-    settings: { lang: 'python', theme: 'system', fontSize: 14 },
+    settings: { lang: LANGS[0], theme: 'system', fontSize: 14 },
     problems: {},
     questions: {},
     lessonsRead: {},
@@ -118,7 +118,9 @@ export function defaultState(): AppState {
 
 function normalize(raw: Partial<AppState>): AppState {
   const d = defaultState();
-  return { ...d, ...raw, settings: { ...d.settings, ...raw.settings } };
+  const settings = { ...d.settings, ...raw.settings };
+  if (!LANGS.includes(settings.lang)) settings.lang = LANGS[0];
+  return { ...d, ...raw, settings };
 }
 
 function load(): AppState {

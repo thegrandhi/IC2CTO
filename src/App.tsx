@@ -15,6 +15,7 @@ import { QuizSession } from './pages/QuizSession';
 import { Review } from './pages/Review';
 import { Settings } from './pages/Settings';
 import { Today } from './pages/Today';
+import { PYTHON_AVAILABLE } from './lib/types';
 import { useRoute } from './router';
 import { useApplyTheme } from './theme';
 
@@ -65,8 +66,9 @@ function useOnline() {
 function RuntimeStatus() {
   const py = useSyncExternalStore(runners.python.subscribe, runners.python.getState);
   const online = useOnline();
-  const [label, cls] =
-    py.status === 'loading'
+  const [label, cls] = !PYTHON_AVAILABLE
+    ? ['Preview: JavaScript only', 'ok']
+    : py.status === 'loading'
       ? [py.message || 'Loading Python…', 'busy']
       : py.status === 'busy'
         ? ['Running…', 'busy']

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { DiagramEditor, EMPTY_DIAGRAM, type Diagram } from '../components/DiagramEditor';
 import { Icon } from '../components/Icon';
 import { Markdown } from '../components/Markdown';
-import { DifficultyPill, formatClock } from '../components/ui';
+import { ConfirmButton, DifficultyPill, formatClock } from '../components/ui';
 import { getDesign } from '../lib/content';
 import { DESIGN_STEPS, type DesignPrompt } from '../lib/content/designs';
 import { designDraftKey, recordDesign, storage, useAppState } from '../lib/store';
@@ -99,7 +99,6 @@ function Session({ design }: { design: DesignPrompt }) {
   };
 
   const restart = () => {
-    if (!confirm('Discard this session and start over?')) return;
     storage.remove(designDraftKey(design.id));
     setDraft(newDraft());
     setRunning(false);
@@ -176,9 +175,9 @@ function Session({ design }: { design: DesignPrompt }) {
               </button>
             </>
           )}
-          <button className="btn ghost" onClick={restart} title="Start over">
+          <ConfirmButton className="btn ghost" onConfirm={restart} title="Start over" confirmLabel="Discard session?">
             <Icon name="reset" />
-          </button>
+          </ConfirmButton>
         </div>
       </div>
 

@@ -64,6 +64,45 @@ export function Modal({ children, onClose, label }: { children: ReactNode; onClo
   );
 }
 
+/**
+ * A button that needs a second tap to act, instead of a native confirm()
+ * dialog (which some embedded browsers suppress).
+ */
+export function ConfirmButton({
+  onConfirm,
+  children,
+  confirmLabel,
+  className = 'btn',
+  title,
+}: {
+  onConfirm: () => void;
+  children: ReactNode;
+  confirmLabel: string;
+  className?: string;
+  title?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    if (!armed) return;
+    const t = setTimeout(() => setArmed(false), 3500);
+    return () => clearTimeout(t);
+  }, [armed]);
+  return (
+    <button
+      className={`${className} ${armed ? 'armed' : ''}`}
+      title={armed ? undefined : title}
+      aria-label={armed ? confirmLabel : title}
+      onClick={() => {
+        if (!armed) return setArmed(true);
+        setArmed(false);
+        onConfirm();
+      }}
+    >
+      {armed ? confirmLabel : children}
+    </button>
+  );
+}
+
 export function formatClock(totalSec: number): string {
   const sign = totalSec < 0 ? '-' : '';
   const s = Math.abs(Math.floor(totalSec));

@@ -1,5 +1,9 @@
 export type Lang = 'python' | 'javascript';
-export const LANGS: Lang[] = ['python', 'javascript'];
+export const ALL_LANGS: Lang[] = ['python', 'javascript'];
+/** A build can leave out the Python runtime (VITE_PYTHON=off) for hosts that can't serve it; JavaScript always runs. */
+export const PYTHON_AVAILABLE = import.meta.env.VITE_PYTHON !== 'off';
+/** Languages the user can run code in. */
+export const LANGS: Lang[] = PYTHON_AVAILABLE ? ALL_LANGS : ['javascript'];
 export const LANG_LABEL: Record<Lang, string> = { python: 'Python', javascript: 'JavaScript' };
 
 export type Difficulty = 'Easy' | 'Medium' | 'Hard';

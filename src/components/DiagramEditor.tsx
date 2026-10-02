@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { Icon } from './Icon';
+import { ConfirmButton } from './ui';
 
 export type NodeKind = 'client' | 'lb' | 'service' | 'db' | 'cache' | 'queue' | 'storage' | 'cdn' | 'note';
 
@@ -98,6 +99,7 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
   const [sel, setSel] = useState<{ type: 'node' | 'edge'; id: string } | null>(null);
   const [connect, setConnect] = useState(false);
   const [pendingFrom, setPendingFrom] = useState<string | null>(null);
+  const [editing, setEditing] = useState<{ type: 'node' | 'edge'; id: string; value: string } | null>(null);
   const drag = useRef<{ id: string; dx: number; dy: number; moved: boolean } | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const d = value;
@@ -115,7 +117,7 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
     const w = kind === 'note' ? 180 : 140;
     const h = kind === 'note' ? 60 : 56;
     // Drop the new box into the first free grid slot within the visible area.
-    const container = svgRef.current?.parentElement;
+    const container = svgRef.current?.closest('.diagram-canvas');
     const originX = snap(container?.scrollLeft ?? 0) + 40;
     const originY = snap(container?.scrollTop ?? 0) + 40;
     const cols = Math.max(1, Math.floor(((container?.clientWidth ?? 800) - 40) / 190));
@@ -139,6 +141,7 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
     };
     onChange({ ...d, nodes: [...d.nodes, node] });
     setSel({ type: 'node', id: node.id });
+    setEditing({ type: 'node', id: node.id, value: node.label });
   };
 
   const removeSelected = () => {
@@ -151,19 +154,24 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
     setSel(null);
   };
 
+  /** Opens an inline text box over the selected box or arrow. */
   const rename = () => {
     if (!sel) return;
-    if (sel.type === 'node') {
-      const n = d.nodes.find((x) => x.id === sel.id);
-      if (!n) return;
-      const label = prompt('Label', n.label);
-      if (label !== null) onChange({ ...d, nodes: d.nodes.map((x) => (x.id === n.id ? { ...x, label } : x)) });
+    const label = sel.type === 'node' ? d.nodes.find((x) => x.id === sel.id)?.label : d.edges.find((x) => x.id === sel.id)?.label;
+    setEditing({ ...sel, value: label ?? '' });
+  };
+
+  const commitEdit = () => {
+    if (!editing) return;
+    const label = editing.value.trim();
+    if (editing.type === 'node') {
+      // Widen the box to fit its label (13px semibold ≈ 7.8px per character).
+      const fit = (n: DNode) => Math.min(320, Math.max(n.kind === 'note' ? 180 : 140, Math.round(label.length * 7.8 + 28)));
+      if (label) onChange({ ...d, nodes: d.nodes.map((x) => (x.id === editing.id ? { ...x, label, w: Math.min(fit(x), W - x.x) } : x)) });
     } else {
-      const e = d.edges.find((x) => x.id === sel.id);
-      if (!e) return;
-      const label = prompt('Arrow label (e.g. "HTTPS", "async", "read")', e.label ?? '');
-      if (label !== null) onChange({ ...d, edges: d.edges.map((x) => (x.id === e.id ? { ...x, label } : x)) });
+      onChange({ ...d, edges: d.edges.map((x) => (x.id === editing.id ? { ...x, label: label || undefined } : x)) });
     }
+    setEditing(null);
   };
 
   useEffect(() => {
@@ -178,6 +186,7 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
         setPendingFrom(null);
         setSel(null);
       } else if (e.key === 'Enter' && sel) {
+        e.preventDefault();
         rename();
       }
     };
@@ -246,16 +255,12 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
         <button className="btn small danger" onClick={removeSelected} disabled={!sel} title="Delete (Del)">
           <Icon name="trash" />
         </button>
-        <button
-          className="btn small ghost"
-          onClick={() => {
-            if (d.nodes.length && confirm('Clear the whole diagram?')) onChange(EMPTY_DIAGRAM);
-          }}
-        >
+        <ConfirmButton className="btn small ghost" confirmLabel="Clear all?" onConfirm={() => onChange(EMPTY_DIAGRAM)}>
           Clear
-        </button>
+        </ConfirmButton>
       </div>
       <div className="diagram-canvas">
+        <div className="diagram-stage" style={{ width: W, height: H }}>
         <svg
           ref={svgRef}
           width={W}
@@ -329,7 +334,7 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
                   </text>
                 )}
                 <text x={n.x + n.w / 2} y={n.y + n.h / 2 + (n.kind === 'note' ? 4 : 10)} textAnchor="middle">
-                  {n.label.length > 22 ? n.label.slice(0, 21) + '…' : n.label}
+                  {n.label.length > 38 ? n.label.slice(0, 37) + '…' : n.label}
                 </text>
               </g>
             );
@@ -340,7 +345,53 @@ export function DiagramEditor({ value, onChange }: { value: Diagram; onChange: (
             </text>
           )}
         </svg>
+        {editing && <LabelInput editing={editing} d={d} onChange={(value) => setEditing({ ...editing, value })} onCommit={commitEdit} onCancel={() => setEditing(null)} />}
+        </div>
       </div>
     </div>
+  );
+}
+
+function LabelInput({
+  editing,
+  d,
+  onChange,
+  onCommit,
+  onCancel,
+}: {
+  editing: { type: 'node' | 'edge'; id: string; value: string };
+  d: Diagram;
+  onChange: (value: string) => void;
+  onCommit: () => void;
+  onCancel: () => void;
+}) {
+  let box: { left: number; top: number; width: number } | null = null;
+  if (editing.type === 'node') {
+    const n = d.nodes.find((x) => x.id === editing.id);
+    if (n) box = { left: n.x + 6, top: n.y + n.h / 2 - 2, width: n.w - 12 };
+  } else {
+    const e = d.edges.find((x) => x.id === editing.id);
+    const a = e && d.nodes.find((x) => x.id === e.from);
+    const b = e && d.nodes.find((x) => x.id === e.to);
+    if (a && b) box = { left: (a.x + a.w / 2 + b.x + b.w / 2) / 2 - 80, top: (a.y + a.h / 2 + b.y + b.h / 2) / 2 - 16, width: 160 };
+  }
+  if (!box) return null;
+  return (
+    <input
+      className="dg-label-input"
+      style={{ left: box.left, top: box.top, width: box.width }}
+      value={editing.value}
+      placeholder={editing.type === 'edge' ? 'e.g. HTTPS, async' : 'Name'}
+      aria-label={editing.type === 'edge' ? 'Arrow label' : 'Box label'}
+      autoFocus
+      onFocus={(e) => e.currentTarget.select()}
+      onChange={(e) => onChange(e.target.value)}
+      onPointerDown={(e) => e.stopPropagation()}
+      onBlur={onCommit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') onCommit();
+        else if (e.key === 'Escape') onCancel();
+      }}
+    />
   );
 }

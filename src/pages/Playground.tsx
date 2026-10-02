@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { CodeEditor } from '../components/CodeEditor';
 import { Icon } from '../components/Icon';
+import { ConfirmButton } from '../components/ui';
 import { execCode, runners } from '../lib/runner/runner';
 import { STORAGE_PREFIX, storage, updateSettings, useAppState } from '../lib/store';
 import { LANG_LABEL, LANGS, type ExecReport, type Lang } from '../lib/types';
@@ -71,14 +72,9 @@ export function Playground() {
         </select>
         <span className="small faint">{runner.status === 'loading' ? runner.message : runner.version}</span>
         <div className="spacer" />
-        <button
-          className="btn ghost small"
-          onClick={() => {
-            if (confirm('Replace the scratchpad with the sample code?')) onChange(SAMPLES[lang]);
-          }}
-        >
+        <ConfirmButton className="btn ghost small" onConfirm={() => onChange(SAMPLES[lang])} title="Replace the scratchpad with sample code" confirmLabel="Replace code?">
           <Icon name="reset" /> Sample
-        </button>
+        </ConfirmButton>
         {running ? (
           <button className="btn" onClick={() => runners[lang].cancel()}>
             <Icon name="stop" /> Stop

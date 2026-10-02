@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { InstallCard } from '../components/InstallCard';
+import { ConfirmButton } from '../components/ui';
 import { allDesigns, allLessons, allProblems, allQuestions } from '../lib/content';
 import { exportBackup, importBackup, resetAll, storageWorks, updateSettings, useAppState, type Backup } from '../lib/store';
 import { LANG_LABEL, LANGS } from '../lib/types';
@@ -36,15 +37,28 @@ export function Settings() {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const [pending, setPending] = useState<Backup | null>(null);
+
   const upload = async (file: File) => {
     try {
       const backup = JSON.parse(await file.text()) as Backup;
-      if (!confirm('Replace all progress on this device with the backup?')) return;
-      importBackup(backup);
+      if (backup?.app !== 'code-gym') throw new Error('This file is not a Code Gym backup.');
+      setPending(backup);
+      setMsg(null);
+    } catch (e) {
+      setMsg(`Could not read the backup: ${(e as Error).message}`);
+    }
+  };
+
+  const restore = () => {
+    if (!pending) return;
+    try {
+      importBackup(pending);
       setMsg('Backup restored.');
     } catch (e) {
       setMsg(`Could not restore: ${(e as Error).message}`);
     }
+    setPending(null);
   };
 
   return (
@@ -136,18 +150,33 @@ export function Settings() {
             }}
           />
           <div className="spacer" />
-          <button
+          <ConfirmButton
             className="btn danger"
-            onClick={() => {
-              if (confirm('Erase all progress, drafts and notes on this device? This cannot be undone.')) {
-                resetAll();
-                setMsg('All progress erased.');
-              }
+            confirmLabel="Tap again to erase everything"
+            onConfirm={() => {
+              resetAll();
+              setMsg('All progress erased.');
             }}
           >
             <Icon name="trash" /> Reset everything
-          </button>
+          </ConfirmButton>
         </div>
+        {pending && (
+          <div className="callout warn stack" style={{ gap: 8 }}>
+            <span className="small">
+              Replace all progress on this device with the backup from {new Date(pending.exportedAt).toLocaleString()}? Your current progress will be
+              lost.
+            </span>
+            <div className="row">
+              <button className="btn primary small" onClick={restore}>
+                Replace my progress
+              </button>
+              <button className="btn ghost small" onClick={() => setPending(null)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
         {msg && <div className="callout small">{msg}</div>}
       </div>
 

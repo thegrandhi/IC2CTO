@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { CodeEditor, CodeView } from '../components/CodeEditor';
 import { Icon } from '../components/Icon';
 import { Markdown } from '../components/Markdown';
-import { DifficultyPill, formatClock, formatDuration, Modal, useStopwatch } from '../components/ui';
+import { ConfirmButton, DifficultyPill, formatClock, formatDuration, Modal, useStopwatch } from '../components/ui';
 import { allProblems, getProblem } from '../lib/content';
 import { runners, runProblem } from '../lib/runner/runner';
 import { dueLabel, RATINGS, schedule, todayStr, type Rating } from '../lib/srs';
 import { draftKey, rateProblem, recordAttempt, setProblemField, storage, updateSettings, useAppState } from '../lib/store';
-import { isDesignTest, LANG_LABEL, LANGS, type Lang, type Problem, type TestCase, type TestOutcome } from '../lib/types';
+import { ALL_LANGS, isDesignTest, LANG_LABEL, LANGS, type Lang, type Problem, type TestCase, type TestOutcome } from '../lib/types';
 import { navigate } from '../router';
 
 const TARGET_MIN = { Easy: 20, Medium: 35, Hard: 50 } as const;
@@ -154,7 +154,6 @@ function Workspace({ p, mode }: { p: Problem; mode: 'practice' | 'review' | 'moc
   const setLang = (l: Lang) => updateSettings({ lang: l });
 
   const resetCode = () => {
-    if (!confirm('Replace your code with the starter template?')) return;
     setCodes((c) => ({ ...c, [lang]: p.starter[lang] }));
     storage.remove(draftKey(p.id, lang));
   };
@@ -326,9 +325,9 @@ function Workspace({ p, mode }: { p: Problem; mode: 'practice' | 'review' | 'moc
               {runner.message}
             </span>
           )}
-          <button className="btn ghost small" onClick={resetCode} title="Reset to starter code">
+          <ConfirmButton className="btn ghost small" onConfirm={resetCode} title="Reset to starter code" confirmLabel="Reset code?">
             <Icon name="reset" />
-          </button>
+          </ConfirmButton>
           {results?.running ? (
             <button className="btn" onClick={() => runners[lang].cancel()} aria-label="Stop">
               <Icon name="stop" /> <span className="btn-label">Stop</span>
@@ -429,7 +428,7 @@ function SolutionTab({
         </div>
       )}
       <div className="seg" style={{ marginTop: 8 }}>
-        {LANGS.filter((l) => p.solutions[l]).map((l) => (
+        {ALL_LANGS.filter((l) => p.solutions[l]).map((l) => (
           <button key={l} className={solLang === l ? 'on' : ''} onClick={() => setSolLang(l)}>
             {LANG_LABEL[l]}
           </button>

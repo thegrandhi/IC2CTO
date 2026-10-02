@@ -16,6 +16,7 @@ import {
 } from '../lib/planner';
 import { addDays, todayStr } from '../lib/srs';
 import { activityTotal, dayActivity, pinDailyQuestion, streak, useAppState } from '../lib/store';
+import { PYTHON_AVAILABLE } from '../lib/types';
 import { navigate } from '../router';
 
 function greeting(): string {
@@ -199,6 +200,13 @@ export function Today() {
           </button>
         </div>
       </div>
+
+      {!PYTHON_AVAILABLE && (
+        <div className="callout small" style={{ marginBottom: 16 }}>
+          You're using a preview. Code runs in JavaScript only, and the preview doesn't work offline. The installed app adds Python and
+          offline use.
+        </div>
+      )}
 
       <div className="hero">
         <div className="stat">

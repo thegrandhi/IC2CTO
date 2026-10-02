@@ -453,6 +453,12 @@ button {
   color: var(--fail);
 }
 
+.btn.armed {
+  border-color: var(--warn);
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
 .btn.small {
   padding: 4px 10px;
   font-size: 0.82rem;
@@ -1490,6 +1496,7 @@ button {
 
 .order-item .text {
   flex: 1;
+  min-width: 0;
 }
 
 .order-item .moves {
@@ -1623,11 +1630,14 @@ button {
 
 .progress-dots {
   display: flex;
-  gap: 5px;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .progress-dots span {
-  width: 26px;
+  flex: 0 1 26px;
+  min-width: 3px;
   height: 5px;
   border-radius: 99px;
   background: var(--panel-3);
@@ -1831,6 +1841,27 @@ button {
 
 .diagram-canvas svg {
   display: block;
+}
+
+.diagram-stage {
+  position: relative;
+}
+
+.dg-label-input {
+  position: absolute;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 2px solid var(--accent);
+  background: var(--panel);
+  color: var(--text);
+  font: 600 13px var(--font);
+  text-align: center;
+  box-shadow: var(--shadow);
+}
+
+.dg-label-input:focus {
+  outline: none;
 }
 
 .dg-node rect {
@@ -2141,5 +2172,14 @@ button {
   .match-item {
     font-size: 0.9rem;
     padding: 8px 10px;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Wrap long code lines in drills so every gap stays visible and tappable. */
+  .blank-code {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 0.8rem;
   }
 }
