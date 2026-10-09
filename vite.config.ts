@@ -14,8 +14,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['icon.svg', 'apple-touch-icon.png'],
       manifest: {
-        name: 'Code Gym: interview practice',
-        short_name: 'Code Gym',
+        name: 'Base Case: interview practice',
+        short_name: 'Base Case',
         description: 'Offline practice for coding interviews and system design.',
         theme_color: '#0d1117',
         background_color: '#0d1117',

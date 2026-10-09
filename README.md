@@ -1,6 +1,6 @@
-# Code Gym
+# Base Case
 
-A gym for coding interviews and system design that works **fully offline**: on a laptop without Wi-Fi, on a plane, or on your phone between sets.
+Interview practice for coding and system design that works **fully offline**: on a laptop without Wi-Fi, on a plane, or on your phone between sets.
 
 - **138 coding problems** across 18 patterns (arrays, two pointers, sliding window, trees, graphs, DP, …). Solve them in **Python or JavaScript** right in the browser, with instant tests, hints, explanations and reference solutions in both languages.
 - **Quick Reps**: 3-minute, tap-only sessions built for a phone. Fill-in-the-blank code, "order the lines" drills and system design questions, with no typing needed.

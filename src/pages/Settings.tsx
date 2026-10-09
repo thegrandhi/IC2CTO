@@ -3,7 +3,7 @@ import { Icon } from '../components/Icon';
 import { InstallCard } from '../components/InstallCard';
 import { ConfirmButton } from '../components/ui';
 import { allDesigns, allLessons, allProblems, allQuestions } from '../lib/content';
-import { exportBackup, importBackup, resetAll, storageWorks, updateSettings, useAppState, type Backup } from '../lib/store';
+import { exportBackup, importBackup, isBackup, resetAll, storageWorks, updateSettings, useAppState, type Backup } from '../lib/store';
 import { LANG_LABEL, LANGS } from '../lib/types';
 
 function useStorageInfo() {
@@ -32,7 +32,7 @@ export function Settings() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `code-gym-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `base-case-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
@@ -41,8 +41,8 @@ export function Settings() {
 
   const upload = async (file: File) => {
     try {
-      const backup = JSON.parse(await file.text()) as Backup;
-      if (backup?.app !== 'code-gym') throw new Error('This file is not a Code Gym backup.');
+      const backup: unknown = JSON.parse(await file.text());
+      if (!isBackup(backup)) throw new Error('This file is not a Base Case backup.');
       setPending(backup);
       setMsg(null);
     } catch (e) {

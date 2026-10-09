@@ -1,4 +1,4 @@
-"""Code Gym Python test harness.
+"""Base Case Python test harness.
 
 Loaded into Pyodide by the browser worker, and imported by the local
 verification scripts (scripts/py_runner.py). Keep it compatible with

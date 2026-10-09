@@ -67,6 +67,7 @@ export interface AppState {
   daily: Record<string, { id: string; correct?: boolean }>;
 }
 
+// Keeps the app's former name (Code Gym) so progress saved before the rename still loads.
 export const STORAGE_PREFIX = 'codegym:';
 const KEY = `${STORAGE_PREFIX}state`;
 
@@ -299,19 +300,25 @@ export const designDraftKey = (designId: string) => `${STORAGE_PREFIX}design:${d
 // ------------------------------------------------------------------ backup
 
 export interface Backup {
-  app: 'code-gym';
+  app: 'base-case' | 'code-gym';
   exportedAt: string;
   data: Record<string, string>;
+}
+
+/** True for backups from this app, including ones exported under its former name. */
+export function isBackup(value: unknown): value is Backup {
+  const app = (value as Backup | null)?.app;
+  return app === 'base-case' || app === 'code-gym';
 }
 
 export function exportBackup(): Backup {
   const data: Record<string, string> = {};
   for (const k of storage.keys()) data[k] = storage.get(k) ?? '';
-  return { app: 'code-gym', exportedAt: new Date().toISOString(), data };
+  return { app: 'base-case', exportedAt: new Date().toISOString(), data };
 }
 
 export function importBackup(backup: Backup) {
-  if (backup?.app !== 'code-gym' || typeof backup.data !== 'object') throw new Error('Not a Code Gym backup file.');
+  if (!isBackup(backup) || typeof backup.data !== 'object') throw new Error('Not a Base Case backup file.');
   const parsed = JSON.parse(backup.data[KEY] ?? 'null');
   if (!parsed || parsed.version !== 1) throw new Error('Backup has no progress data.');
   for (const k of storage.keys()) storage.remove(k);

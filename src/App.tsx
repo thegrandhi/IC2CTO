@@ -109,7 +109,7 @@ function UpdatePrompt() {
   if (needRefresh)
     return (
       <div className="toast" role="status">
-        <span>A new version of Code Gym is available.</span>
+        <span>A new version of Base Case is available.</span>
         <button className="btn primary small" onClick={() => updateServiceWorker(true)}>
           Reload
         </button>
@@ -191,7 +191,7 @@ export function App() {
       <nav className="sidebar" aria-label="Main">
         <a className="brand" href="#/">
           <img src={`${import.meta.env.BASE_URL}icon.svg`} alt="" />
-          <span>Code Gym</span>
+          <span>Base Case</span>
         </a>
         {NAV.map((item) => (
           <a key={item.path} href={`#${item.path}`} className={`nav-link ${active === item.match ? 'active' : ''}`}>

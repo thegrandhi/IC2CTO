@@ -5,6 +5,7 @@ import { parseSignature, pythonStarter, javascriptStarter } from './content/sign
 import { outputsMatch } from './runner/compare';
 import { prepareJs } from './runner/jsHarness';
 import { addDays, schedule } from './srs';
+import { isBackup } from './store';
 
 describe('markdown helpers', () => {
   it('splits sections but ignores headings inside code fences', () => {
@@ -126,5 +127,14 @@ describe('srs', () => {
     expect(c.interval).toBe(1);
     expect(c.lapses).toBe(1);
     expect(addDays('2026-02-28', 1)).toBe('2026-03-01');
+  });
+});
+
+describe('backup', () => {
+  it('accepts backups from before the rename', () => {
+    expect(isBackup({ app: 'base-case', data: {} })).toBe(true);
+    expect(isBackup({ app: 'code-gym', data: {} })).toBe(true);
+    expect(isBackup({ app: 'other', data: {} })).toBe(false);
+    expect(isBackup(null)).toBe(false);
   });
 });

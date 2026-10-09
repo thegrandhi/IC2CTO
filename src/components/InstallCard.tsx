@@ -1,14 +1,14 @@
 import { useInstall } from '../lib/install';
 import { Icon } from './Icon';
 
-/** Explains how to put Code Gym on the home screen, with a one-tap install where the browser supports it. */
+/** Explains how to put Base Case on the home screen, with a one-tap install where the browser supports it. */
 export function InstallCard() {
   const install = useInstall();
   if (install.installed) {
     return (
       <div className="card row">
         <Icon name="check" size={18} />
-        <span>Installed. Code Gym runs from your home screen, even offline.</span>
+        <span>Installed. Base Case runs from your home screen, even offline.</span>
       </div>
     );
   }
@@ -24,7 +24,7 @@ export function InstallCard() {
       {install.canPrompt ? (
         <div>
           <button className="btn primary" onClick={() => install.prompt()}>
-            Install Code Gym
+            Install Base Case
           </button>
         </div>
       ) : install.ios ? (
