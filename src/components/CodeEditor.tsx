@@ -2,11 +2,11 @@ import { indentWithTab } from '@codemirror/commands';
 import { javascript } from '@codemirror/lang-javascript';
 import { python } from '@codemirror/lang-python';
 import { indentUnit, syntaxHighlighting } from '@codemirror/language';
-import { Compartment, EditorState, type Extension } from '@codemirror/state';
+import { Compartment, EditorState, RangeSetBuilder, type Extension } from '@codemirror/state';
 import { oneDarkHighlightStyle } from '@codemirror/theme-one-dark';
-import { EditorView, keymap } from '@codemirror/view';
+import { Decoration, EditorView, ViewPlugin, keymap, type DecorationSet, type ViewUpdate } from '@codemirror/view';
 import { basicSetup } from 'codemirror';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { Lang } from '../lib/types';
 import { useResolvedTheme } from '../theme';
 
@@ -40,6 +40,63 @@ function themeExt(dark: boolean, fontSize: number, fill: boolean): Extension {
   ];
 }
 
+// ------------------------------------------------------------------ line wrapping on phones
+
+/** Same breakpoint as the compact editor toolbar in styles.css. */
+const PHONE = '(max-width: 560px)';
+
+function useIsPhone(): boolean {
+  return useSyncExternalStore(
+    (fn) => {
+      const m = window.matchMedia(PHONE);
+      m.addEventListener('change', fn);
+      return () => m.removeEventListener('change', fn);
+    },
+    () => window.matchMedia(PHONE).matches,
+    () => false,
+  );
+}
+
+const indentDecos = new Map<number, Decoration>();
+
+/** Gives each line a hanging indent, so a wrapped line continues 2ch past its own indentation. */
+function hangingIndents(view: EditorView): DecorationSet {
+  const builder = new RangeSetBuilder<Decoration>();
+  const tab = ' '.repeat(view.state.tabSize);
+  let last = -1;
+  for (const { from, to } of view.visibleRanges) {
+    for (let pos = from; pos <= to; ) {
+      const line = view.state.doc.lineAt(pos);
+      pos = line.to + 1;
+      if (line.from === last) continue;
+      last = line.from;
+      const cols = /^[ \t]*/.exec(line.text)![0].replace(/\t/g, tab).length + 2;
+      let deco = indentDecos.get(cols);
+      if (!deco) {
+        deco = Decoration.line({ attributes: { style: `padding-left: calc(${cols}ch + 6px); text-indent: -${cols}ch` } });
+        indentDecos.set(cols, deco);
+      }
+      builder.add(line.from, line.from, deco);
+    }
+  }
+  return builder.finish();
+}
+
+const hangingIndent = ViewPlugin.fromClass(
+  class {
+    decorations: DecorationSet;
+    constructor(view: EditorView) {
+      this.decorations = hangingIndents(view);
+    }
+    update(u: ViewUpdate) {
+      if (u.docChanged || u.viewportChanged) this.decorations = hangingIndents(u.view);
+    }
+  },
+  { decorations: (p) => p.decorations },
+);
+
+const wrapExt = (wrap: boolean): Extension => (wrap ? [EditorView.lineWrapping, hangingIndent] : []);
+
 interface Props {
   value: string;
   onChange?: (value: string) => void;
@@ -58,9 +115,12 @@ export function CodeEditor({ value, onChange, lang, fontSize = 14, readOnly = fa
   const view = useRef<EditorView | null>(null);
   const langComp = useRef(new Compartment());
   const themeComp = useRef(new Compartment());
+  const wrapComp = useRef(new Compartment());
   const callbacks = useRef({ onChange, onRun, onSubmit });
   callbacks.current = { onChange, onRun, onSubmit };
   const dark = useResolvedTheme() === 'dark';
+  // Phones wrap long lines instead of scrolling sideways.
+  const wrap = useIsPhone();
 
   useEffect(() => {
     const v = new EditorView({
@@ -78,6 +138,7 @@ export function CodeEditor({ value, onChange, lang, fontSize = 14, readOnly = fa
           EditorState.tabSize.of(4),
           langComp.current.of(languageExt(lang)),
           themeComp.current.of(themeExt(dark, fontSize, fill)),
+          wrapComp.current.of(wrapExt(wrap)),
           readOnly ? [EditorState.readOnly.of(true), EditorView.editable.of(false)] : [],
           EditorView.contentAttributes.of({ 'aria-label': ariaLabel ?? 'Code editor', autocapitalize: 'off', autocorrect: 'off', spellcheck: 'false' }),
           EditorView.updateListener.of((u) => {
@@ -109,6 +170,10 @@ export function CodeEditor({ value, onChange, lang, fontSize = 14, readOnly = fa
   useEffect(() => {
     view.current?.dispatch({ effects: themeComp.current.reconfigure(themeExt(dark, fontSize, fill)) });
   }, [dark, fontSize, fill]);
+
+  useEffect(() => {
+    view.current?.dispatch({ effects: wrapComp.current.reconfigure(wrapExt(wrap)) });
+  }, [wrap]);
 
   return <div ref={host} className={fill ? 'editor-host fill' : 'editor-host'} style={fill ? { height: '100%' } : undefined} />;
 }

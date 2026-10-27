@@ -464,6 +464,17 @@ button {
   font-size: 0.82rem;
 }
 
+/* A button whose label may be a full sentence: wrap it instead of overflowing on phones. */
+.btn.wrap {
+  white-space: normal;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.btn.wrap svg {
+  flex: none;
+}
+
 .btn.big {
   padding: 11px 20px;
   font-size: 1rem;
@@ -1957,8 +1968,16 @@ button {
   margin: 0;
 }
 
+/* One block per line, so a line that wraps continues under its own indent (plus 2ch). */
+.blank-code .code-line {
+  display: block;
+  padding-left: calc(var(--indent, 0ch) + 2ch);
+  text-indent: -2ch;
+}
+
 .blank-code .gap {
   display: inline-block;
+  text-indent: 0;
   font: inherit;
   line-height: 1.5;
   padding: 0 6px;

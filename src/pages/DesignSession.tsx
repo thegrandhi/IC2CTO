@@ -185,7 +185,7 @@ function Session({ design }: { design: DesignPrompt }) {
         <Markdown text={design.prompt} />
         {design.clarifying.length > 0 && (
           <div style={{ marginTop: 10 }}>
-            <button className="btn small ghost" onClick={() => setShowClarify(!showClarify)}>
+            <button className="btn small ghost wrap" onClick={() => setShowClarify(!showClarify)}>
               <Icon name={showClarify ? 'up' : 'down'} /> Clarifying questions a strong candidate asks
             </button>
             {showClarify && (

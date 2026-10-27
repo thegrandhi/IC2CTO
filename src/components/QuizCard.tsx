@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { getLesson, getProblem, getQuizCategory } from '../lib/content';
-import { seededShuffle, type BlankQuestion, type MatchQuestion, type McqQuestion, type QuizQuestion } from '../lib/content/quiz';
+import { seededShuffle, type BlankPart, type BlankQuestion, type MatchQuestion, type McqQuestion, type QuizQuestion } from '../lib/content/quiz';
 import { Icon } from './Icon';
 import { Markdown } from './Markdown';
 import { CategoryPill } from './ui';
@@ -219,7 +219,7 @@ function Reorder({
         <div style={{ marginTop: 12 }}>
           <div className="io-label">Correct order</div>
           {code ? (
-            <pre className="blank-code">{items.join('\n')}</pre>
+            <IndentedCode lines={items.map((line) => ({ indent: indentOf(line), content: line.trimStart() }))} />
           ) : (
             <ol style={{ margin: 0, paddingLeft: 22 }}>
               {items.map((x, i) => (
@@ -279,35 +279,36 @@ function Blank({ q, onCheck, revealed }: { q: BlankQuestion; onCheck: (ok: boole
   };
 
   const isRight = (b: number) => filled[b] !== null && bank[filled[b]!] === q.answers[b];
+  const lines = useMemo(() => splitLines(q.parts), [q]);
+
+  const renderPart = (part: BlankPart, i: number) => {
+    if (typeof part === 'string') return <span key={i}>{part}</span>;
+    const b = part.blank;
+    const value = filled[b] !== null ? bank[filled[b]!] : null;
+    const cls = revealed ? (isRight(b) ? 'correct' : 'wrong') : b === active ? 'active' : value ? 'filled' : '';
+    return (
+      <button
+        key={i}
+        className={`gap ${cls}`}
+        style={{ minWidth: `${Math.max(3, q.answers[b].length) + 1}ch` }}
+        onClick={() => tapBlank(b)}
+        disabled={revealed}
+        aria-label={`Blank ${b + 1}${value ? `: ${value}` : ''}`}
+      >
+        {revealed && !isRight(b) ? (
+          <>
+            {value && <s>{value}</s>} {q.answers[b]}
+          </>
+        ) : (
+          (value ?? '\u00a0')
+        )}
+      </button>
+    );
+  };
 
   return (
     <>
-      <pre className="blank-code">
-        {q.parts.map((part, i) => {
-          if (typeof part === 'string') return <span key={i}>{part}</span>;
-          const b = part.blank;
-          const value = filled[b] !== null ? bank[filled[b]!] : null;
-          const cls = revealed ? (isRight(b) ? 'correct' : 'wrong') : b === active ? 'active' : value ? 'filled' : '';
-          return (
-            <button
-              key={i}
-              className={`gap ${cls}`}
-              style={{ minWidth: `${Math.max(3, q.answers[b].length) + 1}ch` }}
-              onClick={() => tapBlank(b)}
-              disabled={revealed}
-              aria-label={`Blank ${b + 1}${value ? `: ${value}` : ''}`}
-            >
-              {revealed && !isRight(b) ? (
-                <>
-                  {value && <s>{value}</s>} {q.answers[b]}
-                </>
-              ) : (
-                (value ?? '\u00a0')
-              )}
-            </button>
-          );
-        })}
-      </pre>
+      <IndentedCode lines={lines.map((line) => ({ indent: line.indent, content: line.parts.map(renderPart) }))} />
       {!revealed && (
         <>
           <div className="chips" role="group" aria-label="Word bank">
@@ -427,5 +428,46 @@ function Match({ q, onCheck, revealed }: { q: MatchQuestion; onCheck: (ok: boole
         </div>
       )}
     </>
+  );
+}
+
+// ------------------------------------------------------------------ code blocks that wrap on phones
+
+const indentOf = (line: string) => line.length - line.trimStart().length;
+const isEmpty = (node: ReactNode) => node === '' || (Array.isArray(node) && node.length === 0);
+
+/** Groups drill code into lines, moving each line's leading spaces into `indent`. */
+function splitLines(parts: BlankPart[]): { indent: number; parts: BlankPart[] }[] {
+  const lines: BlankPart[][] = [[]];
+  for (const part of parts) {
+    if (typeof part !== 'string') {
+      lines[lines.length - 1].push(part);
+      continue;
+    }
+    part.split('\n').forEach((text, i) => {
+      if (i > 0) lines.push([]);
+      if (text) lines[lines.length - 1].push(text);
+    });
+  }
+  return lines.map((line) => {
+    const first = line[0];
+    if (typeof first !== 'string') return { indent: 0, parts: line };
+    return { indent: indentOf(first), parts: [first.trimStart(), ...line.slice(1)].filter((p) => p !== '') };
+  });
+}
+
+/**
+ * Code with one block per line. When a long line wraps on a narrow screen, the
+ * continuation stays under the line's own indent instead of jumping to column 0.
+ */
+function IndentedCode({ lines }: { lines: { indent: number; content: ReactNode }[] }) {
+  return (
+    <pre className="blank-code">
+      {lines.map((line, i) => (
+        <span key={i} className="code-line" style={{ '--indent': `${line.indent}ch` } as CSSProperties}>
+          {isEmpty(line.content) ? ' ' : line.content}
+        </span>
+      ))}
+    </pre>
   );
 }
