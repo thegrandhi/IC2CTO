@@ -1,6 +1,7 @@
 // Validates quiz questions, lessons and design prompts, and cross-references between them.
 import { describe, expect, it } from 'vitest';
-import { allDesigns, allLessons, allProblems, allQuestions, getLesson, getProblem, quizCategories } from './lib/content';
+import { allDesigns, allLessons, allProblems, allQuestions, getInterview, getLesson, getProblem, interviewIds, quizCategories } from './lib/content';
+import { DESIGN_STEPS } from './lib/content/designs';
 import { QUIZ_CATEGORY_ORDER } from './lib/content/quiz';
 
 describe('quiz', () => {
@@ -60,10 +61,53 @@ describe('design prompts', () => {
   });
 });
 
+describe('guided interviews', () => {
+  it('exist for every design prompt', () => {
+    expect(interviewIds().sort()).toEqual(allDesigns().map((d) => d.id).sort());
+  });
+
+  it('walk through the main steps in order', () => {
+    for (const d of allDesigns()) {
+      const items = getInterview(d.id) ?? [];
+      const steps = items.map((it) => DESIGN_STEPS.findIndex((s) => s.key === it.step));
+      expect(steps, `${d.id}: steps out of order`).toEqual([...steps].sort((a, b) => a - b));
+      for (const key of ['requirements', 'estimation', 'high-level design', 'deep dives'])
+        expect(items.some((it) => it.step === key), `${d.id} has no ${key} items`).toBe(true);
+      expect(items[0]?.type, `${d.id} should open with clarifying questions`).toBe('ask');
+      expect(items.some((it) => it.type === 'path'), `${d.id} needs a path to build`).toBe(true);
+      expect(items.length, d.id).toBeGreaterThanOrEqual(10);
+    }
+  });
+
+  it('have distinct options with feedback on each', () => {
+    for (const d of allDesigns()) {
+      for (const it of getInterview(d.id) ?? []) {
+        const where = `${d.id}/${it.id}`;
+        expect(it.explanation.length, where).toBeGreaterThan(40);
+        if (it.type === 'choice' || it.type === 'pick') {
+          expect(new Set(it.options.map((o) => o.text)).size, where).toBe(it.options.length);
+          for (const o of it.options) expect(o.note.length, `${where}: "${o.text}" needs a note`).toBeGreaterThan(4);
+        }
+        if (it.type === 'ask') {
+          expect(new Set(it.questions.map((q) => q.text)).size, where).toBe(it.questions.length);
+          expect(it.questions.length, where).toBeGreaterThan(it.budget);
+        }
+      }
+    }
+  });
+
+  it("don't always put the right answer in the same place", () => {
+    for (const d of allDesigns()) {
+      const spots = (getInterview(d.id) ?? []).flatMap((it) => (it.type === 'choice' ? [it.options.findIndex((o) => o.correct)] : []));
+      expect(new Set(spots).size, `${d.id}: right answers at ${spots.join(',')}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
 describe('library size', () => {
   it('reports counts', () => {
     console.log(
-      `problems=${allProblems().length} questions=${allQuestions().length} lessons=${allLessons().length} designs=${allDesigns().length}`,
+      `problems=${allProblems().length} questions=${allQuestions().length} lessons=${allLessons().length} designs=${allDesigns().length} interview items=${interviewIds().reduce((n, id) => n + (getInterview(id)?.length ?? 0), 0)}`,
     );
   });
 });

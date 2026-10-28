@@ -1,7 +1,6 @@
 import { DifficultyPill } from '../components/ui';
-import { allDesigns } from '../lib/content';
-import { DESIGN_STEPS } from '../lib/content/designs';
-import { designDraftKey, storage, useAppState } from '../lib/store';
+import { allDesigns, getInterview } from '../lib/content';
+import { attemptScore, designDraftKey, interviewDraftKey, storage, useAppState } from '../lib/store';
 
 export function DesignList() {
   const s = useAppState();
@@ -12,8 +11,8 @@ export function DesignList() {
         <div>
           <h1>System design</h1>
           <p>
-            Full mock interviews. Work through {DESIGN_STEPS.length} timed steps, sketch the architecture, then grade yourself
-            against a reference answer and rubric.
+            Mock interviews you can do on your phone. An interviewer walks you through each prompt: ask clarifying questions, estimate,
+            make tradeoffs and build the request paths, then see how you scored.
           </p>
         </div>
       </div>
@@ -21,12 +20,13 @@ export function DesignList() {
         {designs.map((d) => {
           const attempts = s.designs[d.id] ?? [];
           const last = attempts.at(-1);
-          const inProgress = !!storage.get(designDraftKey(d.id));
+          const inProgress = !!storage.get(interviewDraftKey(d.id)) || !!storage.get(designDraftKey(d.id));
+          const steps = getInterview(d.id)?.length;
           return (
             <a key={d.id} className="card stack" href={`#/design/${d.id}`} style={{ color: 'inherit', gap: 8 }}>
               <div className="row">
                 <DifficultyPill d={d.difficulty} />
-                <span className="small faint">{d.minutes} min</span>
+                <span className="small faint">{steps ? `${steps} decisions` : `${d.minutes} min`}</span>
                 <div className="spacer" />
                 {inProgress && <span className="pill accent">In progress</span>}
               </div>
@@ -36,7 +36,7 @@ export function DesignList() {
               </div>
               <div className="small faint">
                 {last
-                  ? `Last score ${Math.round((last.checked.length / last.total) * 100)}% · ${attempts.length} session${attempts.length > 1 ? 's' : ''}`
+                  ? `Last score ${Math.round(attemptScore(last) * 100)}% · ${attempts.length} session${attempts.length > 1 ? 's' : ''}`
                   : 'Not attempted yet'}
               </div>
             </a>
@@ -46,10 +46,15 @@ export function DesignList() {
       <div className="section-title">How to practice</div>
       <div className="card md small">
         <ol style={{ margin: 0 }}>
-          <li>Start the clock and talk out loud, or type as if the interviewer can only see your notes.</li>
-          <li>Spend about the suggested minutes on each step. The phase bar shows where you should be.</li>
-          <li>Finish, then compare each step with the reference and tick the rubric items you actually covered.</li>
-          <li>Redo the same prompt a week later. Scores are tracked per session.</li>
+          <li>
+            <strong>Guided interview</strong> (about 15 minutes, tap-only): the interviewer asks, you decide, and every choice gets
+            feedback on why it's right or wrong. Good on a commute.
+          </li>
+          <li>
+            <strong>Whiteboard</strong> (45 minutes): the full free-form version. Take notes for each step, sketch the architecture,
+            then grade yourself against the reference answer and rubric.
+          </li>
+          <li>Start with the guided interview, then do the whiteboard version of the same prompt a few days later from memory.</li>
         </ol>
       </div>
     </div>

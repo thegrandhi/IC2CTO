@@ -141,7 +141,7 @@ export function Today() {
       key: 'design',
       kicker: due ? 'Weekly · mock design interview' : `Design · last session ${sinceDesign}d ago`,
       title: design.title,
-      detail: `${design.minutes}-minute structured session with a whiteboard and a self-review rubric.`,
+      detail: 'A guided mock interview: ask clarifying questions, estimate, pick tradeoffs and build the request paths. About 15 minutes.',
       done: act.designs > 0 || !due,
       action: { label: 'Practice', href: `#/design/${design.id}` },
     });

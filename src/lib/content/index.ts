@@ -1,5 +1,6 @@
 import type { Problem } from '../types';
 import { parseDesign, type DesignPrompt } from './designs';
+import { parseInterview, type InterviewItem } from './interview';
 import { parseLesson, type Lesson } from './lessons';
 import { parseProblem, sortProblems } from './problems';
 import { parseQuizFile, QUIZ_CATEGORY_ORDER, type QuizCategory, type QuizQuestion } from './quiz';
@@ -9,6 +10,7 @@ const glob = {
   quiz: import.meta.glob<string>('/content/quiz/*.md', { query: '?raw', import: 'default', eager: true }),
   lessons: import.meta.glob<string>('/content/lessons/*.md', { query: '?raw', import: 'default', eager: true }),
   designs: import.meta.glob<string>('/content/design/*.md', { query: '?raw', import: 'default', eager: true }),
+  interviews: import.meta.glob<string>('/content/interview/*.md', { query: '?raw', import: 'default', eager: true }),
 };
 
 const idFromPath = (path: string) => path.replace(/^.*\/([^/]+)\.md$/, '$1');
@@ -66,3 +68,9 @@ export const allDesigns = lazy<DesignPrompt[]>(() =>
     .sort((a, b) => a.title.localeCompare(b.title)),
 );
 export const getDesign = byId(allDesigns);
+
+const interviews = lazy(() => new Map(Object.entries(glob.interviews).map(([path, src]) => [idFromPath(path), parseInterview(idFromPath(path), src)])));
+
+/** The guided-interview script for a design prompt, if it has one. */
+export const getInterview = (designId: string): InterviewItem[] | undefined => interviews().get(designId);
+export const interviewIds = (): string[] => [...interviews().keys()];

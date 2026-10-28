@@ -6,7 +6,9 @@ Interview practice for coding and system design that works **fully offline**: on
 - **Quick Reps**: 3-minute, tap-only sessions built for a phone. Fill-in-the-blank code, "order the lines" drills and system design questions, with no typing needed.
 - **Daily question**: one system design question a day across Databases, Infrastructure, APIs, Theory and Product, followed by the reasoning behind the answer. Missed questions come back on a spaced-repetition schedule.
 - **27 bite-size lessons** on the fundamentals (caching, sharding, replication, CAP, queues, rate limiting, …). Each links to its quiz questions.
-- **12 mock design interviews** (URL shortener, chat, news feed, video streaming, ride sharing, …): a 45-minute timer with a step-by-step framework, a whiteboard for boxes and arrows, and a reference answer and rubric to grade yourself.
+- **12 mock design interviews** (URL shortener, chat, news feed, video streaming, ride sharing, …), in two modes:
+  - **Guided interview** (about 15 minutes, tap-only, good on a phone): an interviewer walks you through the prompt in a chat. You spend a limited number of clarifying questions, estimate, choose between designs, build the request paths by tapping components in order, and handle deep-dive curveballs. Every choice gets feedback on why it's right or wrong, and you finish with a scorecard per step.
+  - **Whiteboard** (45 minutes): a timer with a step-by-step framework, notes for each step, a whiteboard for boxes and arrows, and a reference answer and rubric to grade yourself.
 - **Spaced repetition** for problems you've solved, plus streaks, a daily workout, an activity heatmap, per-pattern progress, a timed mock-interview mode, a code playground, and backup/restore.
 
 Everything, including the Python runtime, is cached on the device. Nothing is sent anywhere, and progress is stored in the browser.
@@ -131,6 +133,41 @@ Other types:
 
 See any file in `content/lessons/` or `content/design/`. Design prompts need the sections Requirements, Estimation, API, Data model, High-level design, Deep dives, Wrap-up and Rubric.
 
+### Guided interviews: `content/interview/<design-id>.md`
+
+Every design prompt has a matching interview script. `## Step` headings use the design step names, and any text under a heading is the interviewer's lead-in. Each block ends with `???` and an explanation:
+
+```markdown
+## Requirements
+
+::: ask clarify
+What do you want to know first?
+- [key] What scale should we plan for? => About 100 million new links a day.
+- [ok] Can users delete links? => Yes.
+- [weak] What colour is the homepage? => Out of scope.
+???
+Why these questions matter.
+:::
+
+## High-level design
+
+::: path read-path
+Build the redirect path, in order.
+1. Client
+2. CDN (optional)
+3. Redirect service
+4. Key-value store
+- extra: Kafka => Click events go there asynchronously, off this path.
+???
+How the read path works.
+:::
+```
+
+- `ask`: the candidate gets one more question than there are `[key]` ones; the score is the share of `[key]` questions asked.
+- `choice`: exactly one `- [x]`; every option has `=> feedback`. Options are shown in the order written, so vary where the right one sits.
+- `pick`: select all that apply, with `- [x]` / `- [ ]` and feedback on each; partial credit.
+- `path`: numbered components in order (`(optional)` ones may be skipped), plus `- extra:` distractors with a note on why they don't belong.
+
 ## Scripts
 
 | Command | What it does |
@@ -146,7 +183,7 @@ Set `BASE_PATH=/sub/path/` when building for hosting under a sub-path (the Pages
 ## Project layout
 
 ```
-content/            problems, quiz, lessons, design prompts (Markdown)
+content/            problems, quiz, lessons, design prompts, interview scripts (Markdown)
 scripts/            copy-pyodide, fill-expected, Python test runner
 src/lib/content/    Markdown parsers for all content types
 src/lib/runner/     Python + JS harnesses, workers, watchdog, output comparison

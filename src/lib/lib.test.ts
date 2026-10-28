@@ -5,6 +5,7 @@ import { parseSignature, pythonStarter, javascriptStarter } from './content/sign
 import { outputsMatch } from './runner/compare';
 import { prepareJs } from './runner/jsHarness';
 import { addDays, schedule } from './srs';
+import { checkPath, parseInterview, scoreItem, type PathItem } from './content/interview';
 import { isBackup } from './store';
 
 describe('markdown helpers', () => {
@@ -136,5 +137,85 @@ describe('backup', () => {
     expect(isBackup({ app: 'code-gym', data: {} })).toBe(true);
     expect(isBackup({ app: 'other', data: {} })).toBe(false);
     expect(isBackup(null)).toBe(false);
+  });
+});
+
+describe('guided interview', () => {
+  const md = `## Requirements
+
+Lead-in from the interviewer.
+
+::: ask clarify
+What do you want to know?
+- [key] Scale? => Big.
+- [key] Read/write ratio? => 100:1.
+- [ok] Expiry? => Optional.
+- [weak] Colour? => Irrelevant.
+???
+Why scale matters.
+:::
+
+## High-level design
+
+::: path read
+Build the read path.
+1. Client
+2. CDN (optional)
+3. Service
+4. Store
+- extra: Kafka => Async, off the path.
+- extra: Queue => Not on reads.
+???
+Explanation of the path.
+:::
+
+::: pick scope
+In scope?
+- [x] A => yes
+- [x] B => yes
+- [ ] C => no
+???
+Scope explanation.
+:::
+`;
+  const items = parseInterview('t', md);
+
+  it('parses steps, lead-ins and item types', () => {
+    expect(items.map((i) => [i.type, i.step])).toEqual([
+      ['ask', 'requirements'],
+      ['path', 'high-level design'],
+      ['pick', 'high-level design'],
+    ]);
+    expect(items[0].intro).toBe('Lead-in from the interviewer.');
+    expect(items[1].intro).toBeUndefined();
+  });
+
+  it('gives one more question than there are key questions', () => {
+    const ask = items[0];
+    expect(ask.type === 'ask' && ask.budget).toBe(3);
+    expect(scoreItem(ask, { type: 'ask', asked: [0, 3], done: true })).toBe(0.5);
+  });
+
+  it('accepts a path with or without its optional steps, in order', () => {
+    const path = items[1] as PathItem;
+    expect(checkPath(path, ['Client', 'Service', 'Store']).correct).toBe(true);
+    expect(checkPath(path, ['Client', 'CDN', 'Service', 'Store']).correct).toBe(true);
+    const swapped = checkPath(path, ['Client', 'Store', 'Service']);
+    expect(swapped).toMatchObject({ correct: false, misordered: true, missing: [], wrong: [] });
+    expect(scoreItem(path, { type: 'path', path: ['Client', 'Store', 'Service'] })).toBe(0.5);
+    expect(checkPath(path, ['Client', 'Kafka', 'Service']).missing).toEqual(['Store']);
+    expect(scoreItem(path, { type: 'path', path: ['Client', 'Kafka', 'Service', 'Store'] })).toBe(0);
+  });
+
+  it('gives partial credit on select-all questions', () => {
+    expect(scoreItem(items[2], { type: 'pick', picked: [0, 1] })).toBe(1);
+    expect(scoreItem(items[2], { type: 'pick', picked: [0, 2] })).toBeCloseTo(1 / 3);
+  });
+
+  it('rejects malformed scripts', () => {
+    expect(() => parseInterview('t', '::: choice x\nQ?\n- [x] a => b\n???\nwhy\n:::')).toThrow(/before the first/);
+    expect(() => parseInterview('t', '## Nope\n')).toThrow(/unknown step/);
+    expect(() => parseInterview('t', '## API\n::: choice x\nQ?\n- [x] a => n\n- [x] b => n\n- [ ] c => n\n???\nwhy\n:::')).toThrow(/exactly one/);
+    expect(() => parseInterview('t', '## API\n::: choice x\nQ?\n- [x] a\n- [ ] b => n\n- [ ] c => n\n???\nwhy\n:::')).toThrow(/text => note/);
   });
 });

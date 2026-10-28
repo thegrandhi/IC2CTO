@@ -163,7 +163,7 @@ export function App() {
       page = id ? <LessonPage key={id} id={id} /> : <Lessons />;
       break;
     case 'design':
-      page = id ? <DesignSession key={id} id={id} /> : <DesignList />;
+      page = id ? <DesignSession key={id + (route.query.get('mode') ?? '')} id={id} mode={route.query.get('mode')} /> : <DesignList />;
       break;
     case 'playground':
       page = <Playground />;

@@ -3,9 +3,10 @@ import { DiagramEditor, EMPTY_DIAGRAM, type Diagram } from '../components/Diagra
 import { Icon } from '../components/Icon';
 import { Markdown } from '../components/Markdown';
 import { ConfirmButton, DifficultyPill, formatClock } from '../components/ui';
-import { getDesign } from '../lib/content';
+import { getDesign, getInterview } from '../lib/content';
 import { DESIGN_STEPS, type DesignPrompt } from '../lib/content/designs';
-import { designDraftKey, recordDesign, storage, useAppState } from '../lib/store';
+import { attemptScore, designDraftKey, recordDesign, storage, useAppState } from '../lib/store';
+import { DesignInterview } from './DesignInterview';
 
 interface Draft {
   notes: Record<string, string>;
@@ -28,7 +29,7 @@ function loadDraft(id: string): Draft | null {
   }
 }
 
-export function DesignSession({ id }: { id: string }) {
+export function DesignSession({ id, mode }: { id: string; mode?: string | null }) {
   const design = getDesign(id);
   if (!design) {
     return (
@@ -40,10 +41,46 @@ export function DesignSession({ id }: { id: string }) {
       </div>
     );
   }
-  return <Session design={design} />;
+  const interview = getInterview(id);
+  if (interview && mode !== 'whiteboard') {
+    return (
+      <div className="page narrow">
+        <div className="row" style={{ marginBottom: 10 }}>
+          <a href="#/design" className="small muted">
+            ← System design
+          </a>
+        </div>
+        <div className="page-head" style={{ marginBottom: 14 }}>
+          <div>
+            <h1>{design.title}</h1>
+            <div className="row" style={{ marginTop: 6 }}>
+              <DifficultyPill d={design.difficulty} />
+              <ModeSwitch id={id} mode="guided" />
+            </div>
+          </div>
+        </div>
+        <DesignInterview design={design} items={interview} />
+      </div>
+    );
+  }
+  return <Session design={design} guided={!!interview} />;
 }
 
-function Session({ design }: { design: DesignPrompt }) {
+/** Guided interview (tap through decisions) or whiteboard (free-form notes, diagram and rubric). */
+function ModeSwitch({ id, mode }: { id: string; mode: 'guided' | 'whiteboard' }) {
+  return (
+    <div className="seg" aria-label="Practice mode">
+      <a className={mode === 'guided' ? 'on' : ''} aria-current={mode === 'guided' ? 'page' : undefined} href={`#/design/${id}`}>
+        Guided interview
+      </a>
+      <a className={mode === 'whiteboard' ? 'on' : ''} aria-current={mode === 'whiteboard' ? 'page' : undefined} href={`#/design/${id}?mode=whiteboard`}>
+        Whiteboard
+      </a>
+    </div>
+  );
+}
+
+function Session({ design, guided }: { design: DesignPrompt; guided: boolean }) {
   const s = useAppState();
   const [draft, setDraft] = useState<Draft>(() => loadDraft(design.id) ?? newDraft());
   const [running, setRunning] = useState(false);
@@ -93,7 +130,13 @@ function Session({ design }: { design: DesignPrompt }) {
   };
 
   const save = () => {
-    recordDesign(design.id, { at: new Date().toISOString(), checked: draft.checked, total: design.rubric.length, minutes: Math.round(draft.elapsed / 60) });
+    recordDesign(design.id, {
+      at: new Date().toISOString(),
+      checked: draft.checked,
+      total: design.rubric.length,
+      minutes: Math.round(draft.elapsed / 60),
+      mode: 'whiteboard',
+    });
     storage.remove(designDraftKey(design.id));
     setSaved(true);
   };
@@ -117,7 +160,7 @@ function Session({ design }: { design: DesignPrompt }) {
           </h1>
           <p className="muted" style={{ margin: 0 }}>
             You covered {score} of {design.rubric.length} rubric points in {Math.round(draft.elapsed / 60)} minutes.
-            {past.length > 1 && ` Previous best: ${Math.max(...past.slice(0, -1).map((a) => Math.round((a.checked.length / a.total) * 100)))}%.`} Try
+            {past.length > 1 && ` Previous best: ${Math.max(...past.slice(0, -1).map((a) => Math.round(attemptScore(a) * 100)))}%.`} Try
             this prompt again in a week, from scratch.
           </p>
           <div className="row">
@@ -145,6 +188,7 @@ function Session({ design }: { design: DesignPrompt }) {
           <h1>{design.title}</h1>
           <div className="row" style={{ marginTop: 6 }}>
             <DifficultyPill d={design.difficulty} />
+            {guided && <ModeSwitch id={design.id} mode="whiteboard" />}
             {design.tags.map((t) => (
               <span key={t} className="pill">
                 {t}

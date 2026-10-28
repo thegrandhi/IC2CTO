@@ -34,10 +34,16 @@ export interface QuestionProgress {
 
 export interface DesignAttempt {
   at: string;
+  /** Whiteboard: rubric items ticked. Guided: interview items answered fully right. */
   checked: number[];
   total: number;
   minutes: number;
+  mode?: 'guided' | 'whiteboard';
+  /** 0–1. Guided interviews give partial credit, so this can differ from checked/total. */
+  score?: number;
 }
+
+export const attemptScore = (a: DesignAttempt) => a.score ?? a.checked.length / a.total;
 
 export interface DayActivity {
   problems: number;
@@ -296,6 +302,7 @@ export function updateSettings(patch: Partial<Settings>) {
 
 export const draftKey = (problemId: string, lang: Lang) => `${STORAGE_PREFIX}draft:${problemId}:${lang}`;
 export const designDraftKey = (designId: string) => `${STORAGE_PREFIX}design:${designId}`;
+export const interviewDraftKey = (designId: string) => `${STORAGE_PREFIX}interview:${designId}`;
 
 // ------------------------------------------------------------------ backup
 
