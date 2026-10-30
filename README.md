@@ -40,6 +40,10 @@ Installing a web app with offline support requires HTTPS, so host it once. This 
 
 Progress lives on each device. Use **Settings → Export backup / Restore from file** to move it between devices.
 
+## iPhone app
+
+There's also a native iOS app in [`mobile/`](mobile/README.md), built with Expo. It covers the phone-first half (Quick Reps, the daily question, lessons and guided mock interviews) with a native tab bar, SF Symbols, haptics and on-device storage. It reads the same `content/` files and shares the parsing and scoring code in `src/lib`, and backups move between the two apps. Coding problems stay on the web. See [mobile/README.md](mobile/README.md) for how to build it and ship it to the App Store.
+
 ## How it works
 
 | Piece | Tech |

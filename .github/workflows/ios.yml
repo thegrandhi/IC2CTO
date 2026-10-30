@@ -1,0 +1,54 @@
+name: iOS app
+
+# Checks the Expo app whenever it, the shared content, or the shared code changes.
+# Run it manually with "submit" ticked to build in the cloud with EAS and send the
+# build to TestFlight (needs an EXPO_TOKEN secret and one interactive build first;
+# see mobile/README.md).
+
+on:
+  push:
+    paths: ['mobile/**', 'content/**', 'src/lib/**', '.github/workflows/ios.yml']
+  pull_request:
+    paths: ['mobile/**', 'content/**', 'src/lib/**', '.github/workflows/ios.yml']
+  workflow_dispatch:
+    inputs:
+      submit:
+        description: Build and submit to TestFlight
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: mobile
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run check
+
+  testflight:
+    if: github.event_name == 'workflow_dispatch' && inputs.submit
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npx eas-cli@latest build --platform ios --profile production --non-interactive --no-wait --auto-submit
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
